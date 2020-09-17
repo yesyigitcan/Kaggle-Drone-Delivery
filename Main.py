@@ -21,9 +21,9 @@ if __name__ == '__main__':
 
     commander = Commander(warehouses, orders, drones, weights)
     print(drones[0])
-    print(warehouses[1].getProductAmountOf(2))
+    #print(warehouses[1].getProductAmountOf(2))
     commander.command('0 L 1 2 2')
-    print(warehouses[1].getProductAmountOf(2))
+    #print(warehouses[1].getProductAmountOf(2))
     print(drones[0])
     drones[0].wait(3)
     print(drones[0])
@@ -31,6 +31,6 @@ if __name__ == '__main__':
     commander.command('0 D 1 0 163')
     print(drones[0])
     print(orders[1])
-    print(commander.getDistance(drones[0], orders[1]))
+    print("Distance from drone 0 to order 1: ", commander.getDistance(drones[0], orders[1]))
 
     

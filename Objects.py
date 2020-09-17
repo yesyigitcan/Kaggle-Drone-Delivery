@@ -109,8 +109,8 @@ class Warehouse:
     def unload(self, productType, amount):
         if self.productAmountList[productType] < amount:
             raise Exception('Not enough product in warehouse') 
-        print(self.productAmountList[productType])
-        print(amount)
+        #print(self.productAmountList[productType])
+        #print(amount)
         self.productAmountList[productType] -= amount
     def getX(self):
         return self.locationDict['x']
@@ -126,7 +126,7 @@ class Warehouse:
         productAmount = 0
         for amount in self.productAmountList:
             productAmount += amount
-        return "Warehouse | X: " + str(self.locationDict['x']) + "\tY: " + str(self.locationDict['y']) + "\tProduct Amount: " + str(productAmount) 
+        return "Wareh | X: " + str(self.locationDict['x']) + "\tY: " + str(self.locationDict['y']) + "\tProduct Amount: " + str(productAmount) 
 
 
 class Order:
@@ -197,14 +197,12 @@ class Drone:
         self.currentPosition['x'] = x
         self.currentPosition['y'] = y
         return distance
-
     def unload(self, order, productType, amount, payload):
         order.unload(productType, amount)
         if self.currentPayLoad - payload < 0:
             self.currentPayLoad = 0
         else:
             self.currentPayLoad -= payload
-    
     def __str__(self):
         return "Drone | X: " + str(self.currentPosition['x']) + "\tY: " + str(self.currentPosition['y']) +  "\tCurrent Payload: " + str(self.currentPayLoad) + "\tProduct Amount: " + str(self.productAmount) + "\tWait: " + str(self.waitDuration)
         
@@ -215,7 +213,6 @@ class Commander:
         self.orders = orders
         self.drones = drones
         self.productTypeWeights = weights
-
     def command(self, commandString):
         commandList = commandString.split(' ')
         droneIndex = int(commandList[0])
