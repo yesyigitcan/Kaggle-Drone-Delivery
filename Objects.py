@@ -1,5 +1,10 @@
 import math
-def calculateDistance(x1, x2, y1, y2):
+from copy import deepcopy
+import matplotlib.pyplot as plt
+import random
+from drawnow import drawnow
+
+def calculateDistance(x1, y1, x2, y2):
     euclidean_distance = ( (x1 - x2)**2 + (y1 - y2)**2 ) ** 0.5
     return math.ceil(euclidean_distance)
 
@@ -95,7 +100,8 @@ class DBReader:
         return self.droneList
     def getProductWeights(self):
         return self.productWeightList
-     
+    def getTurnLimit(self):
+        return self.turn  
 
 class Warehouse:
     def __init__(self):
@@ -112,12 +118,12 @@ class Warehouse:
         #print(self.productAmountList[productType])
         #print(amount)
         self.productAmountList[productType] -= amount
+    def getLocation(self):
+        return self.locationDict
     def getX(self):
         return self.locationDict['x']
     def getY(self):
         return self.locationDict['y']
-    def getLocation(self):
-        return self.locationDict
     def getProductAmountOf(self, index):
         return self.productAmountList[index]
     def getProductAmountList(self):
@@ -137,6 +143,8 @@ class Order:
     def setTargetLocation(self, x, y):
         self.targetLocationDict['x'] = x
         self.targetLocationDict['y'] = y
+    def getLocation(self):
+        return self.targetLocationDict
     def getX(self):
         return self.targetLocationDict['x']
     def getY(self):
@@ -180,10 +188,18 @@ class Drone:
         self.maxPayload = maxPayload
         self.productTypesList = [0 for i in range(productTypeAmount)]
         self.currentPosition = {'x': 0, 'y': 0}
+        self.targetDestination = {'x': 0, 'y': 0}
+        self.actionType = 'N' # 'W' wait, 'F' fly 'L', 'N' null
+        self.step_x = 0.0
+        self.step_y = 0.0
+    def getLocation(self):
+        return self.currentPosition
     def getX(self):
         return self.currentPosition['x']
     def getY(self):
         return self.currentPosition['y']
+    def getWait(self):
+        return self.waitDuration
     def wait(self, time):
         self.waitDuration += time
     def load(self, warehouse, productType, amount, payload):
@@ -192,11 +208,36 @@ class Drone:
         warehouse.unload(productType, amount)
         self.currentPayLoad += amount * payload
         self.productAmount += amount
+    '''
     def fly(self, x, y):
         distance = calculateDistance(self.currentPosition['x'], self.currentPosition['y'], x, y)
         self.currentPosition['x'] = x
         self.currentPosition['y'] = y
         return distance
+    '''
+    def getActionType(self):
+        return self.actionType
+    def setFly(self, x, y):
+        distance = calculateDistance(self.currentPosition['x'], self.currentPosition['y'], x, y)
+        if distance == 0:
+            self.actionType = 'N'
+            return
+        self.targetDestination['x'] = x
+        self.targetDestination['y'] = y
+        self.step_x = (self.targetDestination['x'] - self.currentPosition['x']) / distance
+        self.step_y = (self.targetDestination['y'] - self.currentPosition['y']) / distance
+        self.actionType = 'F'
+        
+    def action(self):
+        if self.actionType == 'W':
+            self.waitDuration += 1
+        elif self.actionType == 'F':
+            self.currentPosition['x'] += self.step_x
+            self.currentPosition['y'] += self.step_y
+            if int(self.currentPosition['x']) == self.targetDestination['x'] and int(self.currentPosition['y']) == self.targetDestination['y']:
+                self.currentPosition = deepcopy(self.targetDestination)
+                self.actionType = 'N'
+
     def unload(self, order, productType, amount, payload):
         order.unload(productType, amount)
         if self.currentPayLoad - payload < 0:
@@ -204,15 +245,18 @@ class Drone:
         else:
             self.currentPayLoad -= payload
     def __str__(self):
-        return "Drone | X: " + str(self.currentPosition['x']) + "\tY: " + str(self.currentPosition['y']) +  "\tCurrent Payload: " + str(self.currentPayLoad) + "\tProduct Amount: " + str(self.productAmount) + "\tWait: " + str(self.waitDuration)
+        return "Drone | X: " + str(self.currentPosition['x']) + "\tY: " + str(self.currentPosition['y']) +  "\tPayload: " + str(self.currentPayLoad) + "/" + str(self.maxPayload) + "\tProduct Amount: " + str(self.productAmount) + "\tWait: " + str(self.waitDuration)
         
 
 class Commander:
-    def __init__(self, warehouses, orders, drones, weights):
+    def __init__(self, warehouses, orders, drones, weights, turnLimit):
         self.warehouses = warehouses
         self.orders = orders
         self.drones = drones
         self.productTypeWeights = weights
+        self.turnLimit = turnLimit
+        self.score = 0
+        self.turn = 0
     def command(self, commandString):
         commandList = commandString.split(' ')
         droneIndex = int(commandList[0])
@@ -239,3 +283,43 @@ class Commander:
             raise Exception('Invalid Command Length')
     def getDistance(self, drone, target):
         return calculateDistance(drone.getX(), drone.getY(), target.getX(), target.getY())
+    def plotMap(self, showWarehouses = True, showOrders = True, showDrones = True):
+        if showWarehouses:
+            plt.scatter([warehouse.getX() for warehouse in self.warehouses], [warehouse.getY() for warehouse in self.warehouses], c='b', label="Warehouse")
+        if showOrders:
+            plt.scatter([order.getX() for order in self.orders], [order.getY() for order in self.orders], c='r', label="Order")
+        if showDrones:
+            plt.scatter([drone.getX() for drone in self.drones], [drone.getY() for drone in self.drones], c='g', label="Drone")
+        plt.legend()
+        plt.grid()
+        plt.show()
+    def setDroneFly(self, i, x, y):
+        self.drones[i].setFly(x, y)
+    def loadDrone(self, i_d, i_w, p_type, amount):
+        self.drones[i_d].load(self.warehouses[i_w], p_type, amount, self.productTypeWeights[p_type])
+    def deliverProduct(self, i_d, i_o, p_type, amount):
+        self.drones[i_d].unload(self.orders[i_o], p_type, amount, self.productTypeWeights[p_type])
+    def make_fig(self):
+        plt.scatter([warehouse.getX() for warehouse in self.warehouses], [warehouse.getY() for warehouse in self.warehouses], c='b', label="Warehouse")
+        plt.scatter([order.getX() for order in self.orders], [order.getY() for order in self.orders], c='r', label="Order")
+        plt.scatter([drone.getX() for drone in self.drones], [drone.getY() for drone in self.drones], c='g', label="Drone")
+    def checkOrderExist(self):
+        for order in self.orders:
+            if not order.isDone():
+                return False
+        return True
+    def startSimulation(self):
+        
+        for i in range(self.turnLimit + 1):
+            if self.turn == self.turnLimit:
+                raise Exception('Exceed turn limit. Simulation terminated')
+            
+            for j in range(len(self.drones)):
+                if self.drones[j].getActionType() == 'N':
+                    self.setDroneFly(j, random.randint(0,350), random.randint(0,350))
+            for drone in self.drones:
+                drone.action()
+            drawnow(self.make_fig)
+            self.turnLimit += 1
+            
+        plt.show()

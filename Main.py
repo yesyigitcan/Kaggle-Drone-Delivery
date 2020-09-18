@@ -1,10 +1,6 @@
 from Objects import *
 
 
-
-
-
-
 if __name__ == '__main__':
     source = './busy_day.in'
     reader = DBReader(source=source)
@@ -18,8 +14,9 @@ if __name__ == '__main__':
     orders = reader.getOrderList()
     drones = reader.getDroneList()
     weights = reader.getProductWeights()
+    turnLimit = reader.getTurnLimit()
 
-    commander = Commander(warehouses, orders, drones, weights)
+    commander = Commander(warehouses, orders, drones, weights, turnLimit)
     print(drones[0])
     #print(warehouses[1].getProductAmountOf(2))
     commander.command('0 L 1 2 2')
@@ -33,4 +30,7 @@ if __name__ == '__main__':
     print(orders[1])
     print("Distance from drone 0 to order 1: ", commander.getDistance(drones[0], orders[1]))
 
+    
+    #commander.flyDrone(0, 15, 15)
+    commander.startSimulation()
     
